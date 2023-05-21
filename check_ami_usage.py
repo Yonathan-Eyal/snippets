@@ -14,13 +14,13 @@ def check_ami_usage(ami_id):
     ami_used = False
 
     if response['Reservations']:
-        ami_used = True
         print(f"The AMI {ami_id} is used by the following EC2 instances:")
         for reservation in response['Reservations']:
             for instance in reservation['Instances']:
                 instance_id = instance['InstanceId']
                 instance_name = get_name_from_tag(instance)
                 print(f"Instance ID: {instance_id}, Name: {instance_name}")
+                ami_used = True
     else:
         print(f"The AMI {ami_id} is not used by any EC2 instances.")
 
@@ -34,7 +34,6 @@ def check_ami_usage(ami_id):
                     for mapping in template['LaunchTemplateData']['BlockDeviceMappings']:
                         if 'Ebs' in mapping and 'SnapshotId' in mapping['Ebs']:
                             if mapping['Ebs']['SnapshotId'] == ami_id:
-                                ami_used = True
                                 filtered_templates.append(template)
                                 break
 
@@ -44,6 +43,7 @@ def check_ami_usage(ami_id):
                 template_id = template['LaunchTemplateId']
                 template_name = get_name_from_tag(template)
                 print(f"Launch Template ID: {template_id}, Name: {template_name}")
+                ami_used = True
         else:
             print(f"The AMI {ami_id} is not used by any Launch Templates.")
 
@@ -65,6 +65,7 @@ def check_ami_usage(ami_id):
             for group in filtered_groups:
                 group_name = get_name_from_tag(group)
                 print(f"Auto Scaling Group Name: {group_name}, Name: {group_name}")
+                ami_used = True
         else:
             print(f"The AMI {ami_id} is not used by any Auto Scaling Groups.")
     return ami_used
