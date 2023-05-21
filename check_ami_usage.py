@@ -1,22 +1,12 @@
-import boto3
+import boto3, json
 
-def get_instance_name(instance):
-    for tag in instance['Tags']:
+
+def get_name_from_tag(res):
+    for tag in res['Tags']:
         if tag['Key'] == 'Name':
             return tag['Value']
     return ''
 
-def get_launch_template_name(template):
-    for tag in template['Tags']:
-        if tag['Key'] == 'Name':
-            return tag['Value']
-    return ''
-
-def get_auto_scaling_group_name(group):
-    for tag in group['Tags']:
-        if tag['Key'] == 'Name':
-            return tag['Value']
-    return ''
 
 def check_ami_usage(ami_id):
     ec2_client = boto3.client('ec2')
@@ -29,8 +19,10 @@ def check_ami_usage(ami_id):
         for reservation in response['Reservations']:
             for instance in reservation['Instances']:
                 instance_id = instance['InstanceId']
-                instance_name = get_instance_name(instance)
+                instance_name = get_name_from_tag(instance)
                 print(f"Instance ID: {instance_id}, Name: {instance_name}")
+    else:
+        print(f"The AMI {ami_id} is not used by any EC2 instances.")
 
     response = ec2_client.describe_launch_templates()
     if 'LaunchTemplates' in response:
@@ -50,7 +42,7 @@ def check_ami_usage(ami_id):
             print(f"The AMI {ami_id} is used by the following Launch Templates:")
             for template in filtered_templates:
                 template_id = template['LaunchTemplateId']
-                template_name = get_launch_template_name(template)
+                template_name = get_name_from_tag(template)
                 print(f"Launch Template ID: {template_id}, Name: {template_name}")
         else:
             print(f"The AMI {ami_id} is not used by any Launch Templates.")
@@ -71,15 +63,12 @@ def check_ami_usage(ami_id):
         if filtered_groups:
             print(f"The AMI {ami_id} is used by the following Auto Scaling Groups:")
             for group in filtered_groups:
-                group_name = group['AutoScalingGroupName']
-                group_name = get_auto_scaling_group_name(group)
+                group_name = get_name_from_tag(group)
                 print(f"Auto Scaling Group Name: {group_name}, Name: {group_name}")
         else:
             print(f"The AMI {ami_id} is not used by any Auto Scaling Groups.")
+    return ami_used
 
-    if not ami_used:
-        print(f"The AMI {ami_id} is not used by any EC2 instances, Launch Templates, or Auto Scaling Groups.")
-        return False
 
 def check_all_amis_usage():
     ec2_client = boto3.client('ec2')
@@ -98,11 +87,12 @@ def check_all_amis_usage():
     else:
         print("No images found.")
 
-
     print("Summary of unused AMIs:")
     if unused_amis:
-       for ami_id in unused_amis:
-           print(f"AMI ID: {ami_id} is not used by any EC2 instances, Launch Templates, or Auto Scaling Groups.")
+        json_str = json.dumps(unused_amis)
+        print(json_str)
+        for ami_id in unused_amis:
+            print(f"AMI ID: {ami_id} is not used by any EC2 instances, Launch Templates, or Auto Scaling Groups.")
     else:
         print("All AMIs are currently in use.")
 
